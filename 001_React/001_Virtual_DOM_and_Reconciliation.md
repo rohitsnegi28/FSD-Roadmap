@@ -116,4 +116,223 @@ React continues to evolve, introducing innovations to enhance its efficiency and
 #### Conclusion
 React’s virtual DOM, reconciliation process, and diffing algorithm form the foundation of its efficiency and performance. By mastering these concepts and leveraging optimization strategies, developers can create dynamic, scalable, and user-friendly applications. As React continues to innovate, staying informed about its advancements ensures that your projects remain at the forefront of modern web development.
 
+---
+### Detailed Notes with Examples and Use Cases for React.memo, `useCallback`, `PureComponent`, and `shouldComponentUpdate`
+
+---
+
+#### **1. React.memo**
+- **Purpose**: Optimizes functional components by memoizing their output to avoid unnecessary re-renders.
+- **How It Works**: 
+  - Wraps a functional component.
+  - Uses shallow comparison of props to determine if re-rendering is needed.
+  - Prevents re-render if props remain the same.
+  
+**Syntax**:
+```javascript
+import React from 'react';
+
+const MyComponent = ({ value }) => {
+  console.log('Rendered');
+  return <div>{value}</div>;
+};
+
+export default React.memo(MyComponent);
+```
+
+**Example**:
+```javascript
+import React, { useState } from 'react';
+import MyComponent from './MyComponent';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <MyComponent value="Static value" />
+    </div>
+  );
+};
+```
+- In the above example, `MyComponent` only renders once despite the parent component (`App`) re-rendering.
+
+**Use Case**:
+- Components that receive props that rarely change (e.g., static configurations or non-interactive content).
+- Works well in large component trees to prevent unnecessary updates.
+
+**Custom Comparison**:
+If shallow comparison isn't sufficient:
+```javascript
+React.memo(
+  MyComponent,
+  (prevProps, nextProps) => prevProps.value === nextProps.value
+);
+```
+
+---
+
+#### **2. useCallback**
+- **Purpose**: Memoizes callback functions to prevent their recreation on every render.
+- **How It Works**: 
+  - Returns the same function reference if dependencies haven't changed.
+  - Helps when passing callback functions as props to child components.
+
+**Syntax**:
+```javascript
+import React, { useCallback } from 'react';
+
+const memoizedCallback = useCallback(() => {
+  console.log('Callback executed');
+}, [dependency]);
+```
+
+**Example**:
+```javascript
+import React, { useState, useCallback } from 'react';
+import ChildComponent from './ChildComponent';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+  const [otherState, setOtherState] = useState(false);
+
+  const increment = useCallback(() => {
+    setCount((prev) => prev + 1);
+  }, []);
+
+  return (
+    <div>
+      <button onClick={() => setOtherState(!otherState)}>Toggle State</button>
+      <ChildComponent increment={increment} />
+    </div>
+  );
+};
+
+const ChildComponent = React.memo(({ increment }) => {
+  console.log('ChildComponent rendered');
+  return <button onClick={increment}>Increment</button>;
+});
+```
+- Without `useCallback`, `increment` would be recreated on every render, causing `ChildComponent` to re-render unnecessarily.
+
+**Use Case**:
+- Avoid re-creating functions in parent components when passing them as props to `React.memo`-wrapped children.
+
+---
+
+#### **3. PureComponent**
+- **Purpose**: Optimizes class components by implementing shallow comparison for `props` and `state`.
+- **How It Works**:
+  - Extends `React.PureComponent` instead of `React.Component`.
+  - Automatically checks whether `props` or `state` have changed using shallow comparison.
+
+**Syntax**:
+```javascript
+import React, { PureComponent } from 'react';
+
+class MyComponent extends PureComponent {
+  render() {
+    console.log('Rendered');
+    return <div>{this.props.value}</div>;
+  }
+}
+
+export default MyComponent;
+```
+
+**Example**:
+```javascript
+import React, { useState } from 'react';
+import MyComponent from './MyComponent';
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <MyComponent value="Static value" />
+    </div>
+  );
+};
+```
+- `MyComponent` won’t re-render unnecessarily because of the shallow comparison in `PureComponent`.
+
+**Use Case**:
+- Ideal for class components where props or state rarely change.
+- Simplifies logic compared to manually implementing `shouldComponentUpdate`.
+
+**Limitation**:
+- Doesn’t deeply compare nested objects or arrays:
+  ```javascript
+  const obj1 = { key: 'value' };
+  const obj2 = { key: 'value' };
+  console.log(obj1 === obj2); // false
+  ```
+
+---
+
+#### **4. shouldComponentUpdate**
+- **Purpose**: Provides fine-grained control over re-rendering in class components.
+- **How It Works**:
+  - Override this lifecycle method to control whether a component should re-render.
+  - Returns `true` to allow re-rendering and `false` to skip it.
+
+**Syntax**:
+```javascript
+import React, { Component } from 'react';
+
+class MyComponent extends Component {
+  shouldComponentUpdate(nextProps, nextState) {
+    return nextProps.value !== this.props.value;
+  }
+
+  render() {
+    console.log('Rendered');
+    return <div>{this.props.value}</div>;
+  }
+}
+
+export default MyComponent;
+```
+
+**Example**:
+```javascript
+class App extends React.Component {
+  state = { value: 'Initial value' };
+
+  updateValue = () => {
+    this.setState({ value: 'Updated value' });
+  };
+
+  render() {
+    return (
+      <div>
+        <button onClick={this.updateValue}>Update Value</button>
+        <MyComponent value={this.state.value} />
+      </div>
+    );
+  }
+}
+```
+- The `MyComponent` will only re-render if the `value` prop changes.
+
+**Use Case**:
+- When you need advanced, custom logic for performance optimization in class components.
+- Suitable for scenarios with complex state or prop dependencies.
+
+**Relation to PureComponent**:
+- `PureComponent` is essentially an automatic implementation of `shouldComponentUpdate` with shallow comparison.
+
+---
+
+### **Comparison Table**
+
+| Feature                | Component Type      | Comparison Type | Use Case                                                   |
+|------------------------|---------------------|-----------------|-----------------------------------------------------------|
+| **React.memo**         | Functional          | Shallow         | Prevent unnecessary renders of functional components.     |
+| **useCallback**        | Functional          | -               | Prevent recreation of functions between renders.          |
+| **PureComponent**      | Class               | Shallow         | Simplify optimization for class components.               |
+| **shouldComponentUpdate** | Class               | Custom           | Fine-grained control over class component re-rendering.   |
 
