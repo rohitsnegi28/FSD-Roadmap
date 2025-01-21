@@ -6,6 +6,10 @@
 - Entityframework
 - Ways of service injection
 - Self join
+- FIlter
+- Cookies
+- Antiforgery tokens
+
 
 
 
