@@ -9,6 +9,8 @@
 - FIlter
 - Cookies
 - Antiforgery tokens
+- sync vs async
+- paraller task execution 
 
 
 
